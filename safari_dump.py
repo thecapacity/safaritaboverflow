@@ -354,27 +354,31 @@ def close_tabs(windows: list[dict], keep_domains: list[str] = []):
             tabs_by_window[win_idx] = []
         tabs_by_window[win_idx].append(tab_idx)
 
+    BATCH_SIZE = 50
+
     for win_idx in sorted(tabs_by_window.keys(), reverse=True):
         tab_indices = sorted(tabs_by_window[win_idx], reverse=True)
 
-        close_lines = [f"            close tab {t}" for t in tab_indices]
+        for i in range(0, len(tab_indices), BATCH_SIZE):
+            batch = tab_indices[i:i + BATCH_SIZE]
+            close_lines = [f"            close tab {t}" for t in batch]
 
-        script = (
-            'tell application "Safari"\n'
-            "    try\n"
-            f"        tell window {win_idx}\n"
-            + "\n".join(close_lines) + "\n"
-            "        end tell\n"
-            "    end try\n"
-            "end tell"
-        )
+            script = (
+                'tell application "Safari"\n'
+                "    try\n"
+                f"        tell window {win_idx}\n"
+                + "\n".join(close_lines) + "\n"
+                "        end tell\n"
+                "    end try\n"
+                "end tell"
+            )
 
-        try:
-            run_applescript(script, timeout=15)
-            closed += len(tab_indices)
-            print(f"\r   Closed {closed}/{total} tabs...          ", end="", flush=True)
-        except RuntimeError:
-            pass
+            try:
+                run_applescript(script, timeout=30)
+                closed += len(batch)
+                print(f"\r   Closed {closed}/{total} tabs...          ", end="", flush=True)
+            except RuntimeError:
+                pass
 
     print(f"\r   ✅ Closed {closed} tabs" + (f", kept {kept} (--keep)" if kept else "") + "          ")
 

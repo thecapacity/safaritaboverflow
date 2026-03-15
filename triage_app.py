@@ -20,12 +20,15 @@ Requirements:
 
 import re
 import sys
+import ssl
 import json
+import socket
 import argparse
+import subprocess
+import tempfile
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
-import socket
 
 
 LINK_RE    = re.compile(r'^(\s*-\s+)\[([^\]]*)\]\(([^)]+)\)(.*)')
@@ -223,6 +226,26 @@ class TriageHandler(BaseHTTPRequestHandler):
 
 # ─── Networking ──────────────────────────────────────────────────────────────────
 
+def make_ssl_context() -> tuple:
+    """Generate a temporary self-signed cert and return (SSLContext, tmp_dir).
+    Caller must keep tmp_dir alive for the server's lifetime."""
+    tmp = tempfile.mkdtemp()
+    cert = f"{tmp}/cert.pem"
+    key  = f"{tmp}/key.pem"
+    subprocess.run([
+        "openssl", "req", "-x509",
+        "-newkey", "rsa:2048",
+        "-keyout", key,
+        "-out", cert,
+        "-days", "1",
+        "-nodes",
+        "-subj", "/CN=localhost",
+    ], check=True, capture_output=True)
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.load_cert_chain(cert, key)
+    return ctx, tmp
+
+
 def get_local_ip() -> str:
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -261,11 +284,14 @@ def main():
         print(f"💾 Cache loaded: {decided} prior decisions, {remaining} remaining")
 
     local_ip = get_local_ip()
+    ssl_ctx, _tmp = make_ssl_context()
     server = HTTPServer(("0.0.0.0", args.port), TriageHandler)
+    server.socket = ssl_ctx.wrap_socket(server.socket, server_side=True)
 
-    print(f"\n🚀 Triage app running!")
-    print(f"   Local:   http://localhost:{args.port}")
-    print(f"   Network: http://{local_ip}:{args.port}  ← open this on your iPhone")
+    print(f"\n🚀 Triage app running (HTTPS)!")
+    print(f"   Local:   https://localhost:{args.port}")
+    print(f"   Network: https://{local_ip}:{args.port}  ← open this on your iPhone")
+    print(f"   ⚠️  You'll need to accept the self-signed cert warning in your browser")
     print(f"\n   Keyboard shortcuts: ←/d=delete  →/k=keep  ↑/a=archive  ↓/r=read")
     print(f"   Press Ctrl+C to stop\n")
 

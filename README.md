@@ -29,7 +29,6 @@ You have hundreds of tabs across Safari profiles and tab groups. Some are resear
 
 ### Phase 3: Augment (future / separate scripts)
 - **`summarize.py`** — AI-powered page summaries using the Anthropic API
-- **`triage_app.py`** — A lightweight Flask app for mobile "swipe to keep/archive" triage (future)
 
 ## Quick Start
 

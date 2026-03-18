@@ -19,7 +19,6 @@ help:
 	@echo "  make clean                   — Deduplicate the latest export"
 	@echo "  make clean-flat              — Deduplicate + regroup by domain"
 	@echo "  make summarize               — AI summaries (needs ANTHROPIC_API_KEY)"
-	@echo "  make triage                  — Start mobile triage app"
 	@echo "  make all                     — Full pipeline: dump + bookmarks + clean"
 	@echo ""
 	@echo "  Options:  PROFILE=<n>  KEEP=gmail.com,slack.com  EXCLUDE=notion.so"
@@ -107,18 +106,6 @@ summarize:
 		python3 summarize.py $(LATEST_TABS); \
 	else \
 		python3 summarize.py $(LATEST_CLEAN); \
-	fi
-
-triage:
-	@if [ -n "$(LATEST_SUMMARIZED)" ]; then \
-		python3 triage_app.py $(LATEST_SUMMARIZED); \
-	elif [ -n "$(LATEST_CLEAN)" ]; then \
-		python3 triage_app.py $(LATEST_CLEAN); \
-	elif [ -n "$(LATEST_ANY)" ]; then \
-		python3 triage_app.py $(LATEST_ANY); \
-	else \
-		echo "No export found. Run 'make fast' first."; \
-		exit 1; \
 	fi
 
 all: fast bookmarks
